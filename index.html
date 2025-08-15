@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Student Planner — Shared</title>
+
+    <!-- Tailwind via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> tailwind.config = { darkMode: 'class' } </script>
+    <style>
+      :root { color-scheme: dark; }
+      html { background: #0a0a0b; }
+    </style>
+
+    <!-- Supabase JS v2 via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  </head>
+
+  <body class="min-h-dvh bg-zinc-950 text-zinc-100 antialiased">
+    <div class="mx-auto max-w-4xl px-4 py-8">
+      <header class="flex items-center justify-between mb-8">
+        <h1 class="text-xl font-bold">
+          Student<span class="text-zinc-400">Planner</span> <span class="text-xs text-zinc-400">(shared)</span>
+        </h1>
+        <div id="authArea" class="text-sm text-zinc-300"></div>
+      </header>
+
+      <!-- Login card -->
+      <section id="loginCard" class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-xl max-w-md">
+        <h2 class="text-lg font-semibold mb-4">Log in to shared calendar</h2>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm mb-1" for="email">Email</label>
+            <input id="email" type="email" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="shared@example.com" />
+          </div>
+          <div>
+            <label class="block text-sm mb-1" for="password">Password</label>
+            <input id="password" type="password" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="••••••••" />
+          </div>
+          <button id="loginBtn" class="w-full rounded-xl bg-white text-zinc-900 px-4 py-2 text-sm font-semibold hover:opacity-90 transition">
+            Log in
+          </button>
+          <p id="loginMsg" class="text-sm text-zinc-400"></p>
+        </div>
+      </section>
+
+      <!-- Items list -->
+      <section id="itemsSection" class="hidden">
+        <div class="mb-4 flex items-center justify-between">
+          <h2 class="text-lg font-semibold">All items</h2>
+          <button id="signOutBtn" class="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800 transition">
+            Sign out
+          </button>
+        </div>
+
+        <div id="emptyState" class="hidden text-sm text-zinc-400 border border-dashed border-zinc-700 rounded-xl p-6">
+          No items yet. (Next step we’ll add forms to create events/homework/exams.)
+        </div>
+
+        <ul id="itemsList" class="space-y-2"></ul>
+      </section>
+    </div>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
