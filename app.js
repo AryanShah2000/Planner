@@ -20,15 +20,23 @@ const tabCompleted  = document.getElementById("tabCompleted");
 const activePane    = document.getElementById("activePane");
 const completedPane = document.getElementById("completedPane");
 
-// Active list
-const itemsList  = document.getElementById("itemsList");
-const emptyState = document.getElementById("emptyState");
+// Filters
+const activeFilters           = document.getElementById("activeFilters");
+const completedFilters        = document.getElementById("completedFilters");
+const activeSubjectFilter     = document.getElementById("activeSubjectFilter");
+const activeSearch            = document.getElementById("activeSearch");
+const completedSubjectFilter  = document.getElementById("completedSubjectFilter");
+const completedSearch         = document.getElementById("completedSearch");
+
+// Active table
+const activeTbody = document.getElementById("activeTbody");
+const emptyState  = document.getElementById("emptyState");
 
 // Completed table
 const completedTbody = document.getElementById("completedTbody");
 const completedEmpty = document.getElementById("completedEmpty");
 
-// Add/Edit modal
+// Modal
 const addModal        = document.getElementById("addModal");
 const addTitle        = document.getElementById("addTitle");
 const addForm         = document.getElementById("addForm");
@@ -79,27 +87,19 @@ subjectBar.querySelectorAll(".subjectBtn").forEach(btn => {
 });
 
 // -------------------- HELPERS --------------------
-function fmtDate(d) {
-  try { return new Date(d).toLocaleDateString(); } catch { return d; }
-}
+function fmtDate(d) { try { return new Date(d).toLocaleDateString(); } catch { return d; } }
 function fmtTime(t) {
   if (!t) return "";
   const [H, M] = t.split(":");
-  const d = new Date();
-  d.setHours(Number(H), Number(M) || 0, 0, 0);
+  const d = new Date(); d.setHours(Number(H), Number(M)||0, 0, 0);
   return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
-function iso(d) {
-  const x = new Date(d);
-  return x.toISOString().slice(0,10);
-}
+function iso(d) { return new Date(d).toISOString().slice(0,10); }
+function monthTitle(dateObj) { return dateObj.toLocaleString(undefined, { month: 'long', year: 'numeric' }); }
 function setAuthedUI(email) {
   authArea.textContent = email ? `Signed in as ${email}` : "";
   loginCard.classList.toggle("hidden", !!email);
   itemsSection.classList.toggle("hidden", !email);
-}
-function monthTitle(dateObj) {
-  return dateObj.toLocaleString(undefined, { month: 'long', year: 'numeric' });
 }
 function setTab(tab) {
   currentTab = tab;
@@ -109,6 +109,8 @@ function setTab(tab) {
   tabCompleted.className = tab === "completed" ? activeClasses : inactiveClasses;
   activePane.classList.toggle("hidden", tab !== "active");
   completedPane.classList.toggle("hidden", tab !== "completed");
+  activeFilters.classList.toggle("hidden", tab !== "active");
+  completedFilters.classList.toggle("hidden", tab !== "completed");
 }
 
 // -------------------- AUTH --------------------
@@ -123,21 +125,12 @@ loginBtn?.addEventListener("click", async () => {
   setAuthedUI(data.user.email);
   await loadItems();
 });
+signOutBtn?.addEventListener("click", async () => { await supabase.auth.signOut(); setAuthedUI(null); });
 
-signOutBtn?.addEventListener("click", async () => {
-  await supabase.auth.signOut();
-  setAuthedUI(null);
-});
-
-// On load, restore session
+// Restore session on load
 (async () => {
   const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    setAuthedUI(session.user.email);
-    await loadItems();
-  } else {
-    setAuthedUI(null);
-  }
+  if (session?.user) { setAuthedUI(session.user.email); await loadItems(); } else { setAuthedUI(null); }
 })();
 
 // -------------------- DATA --------------------
@@ -149,79 +142,79 @@ async function loadItems() {
     .order("time", { ascending: true, nullsFirst: true });
 
   if (error) { console.error(error); loginMsg.textContent = "Error loading items."; return; }
-
   allItems = data || [];
   renderCalendar();
-  renderActiveItems();
+  renderActiveTable();
   renderCompletedTable();
 }
 
-// -------------------- RENDER: ACTIVE LIST --------------------
-function subjectBadge(subject) {
+// -------------------- FILTERS --------------------
+function applyFilters(list, subjectVal, queryVal) {
+  const q = (queryVal || "").trim().toLowerCase();
+  return list.filter(i => {
+    const subjectOK = subjectVal ? i.subject === subjectVal : true;
+    const qOK = q
+      ? (i.title?.toLowerCase().includes(q) || i.notes?.toLowerCase().includes(q))
+      : true;
+    return subjectOK && qOK;
+  });
+}
+activeSubjectFilter.addEventListener("input", renderActiveTable);
+activeSearch.addEventListener("input", renderActiveTable);
+completedSubjectFilter.addEventListener("input", renderCompletedTable);
+completedSearch.addEventListener("input", renderCompletedTable);
+
+// -------------------- RENDER: ACTIVE TABLE --------------------
+function subjectDot(subject) {
   const dot = subjectStyles[subject]?.dot || "bg-zinc-400";
-  return `<span class="inline-flex items-center gap-1 text-xs text-zinc-300">
-    <span class="inline-block size-2 rounded-full ${dot}"></span>${subject}
-  </span>`;
+  return `<span class="inline-block size-2 rounded-full ${dot}"></span>`;
 }
 
-function renderActiveItems() {
-  itemsList.innerHTML = "";
+function renderActiveTable() {
+  activeTbody.innerHTML = "";
 
-  const list = allItems
-    .filter(i => i.status !== "completed")
-    .filter(i => (activeDateFilter ? i.date === activeDateFilter : true));
+  let list = allItems.filter(i => i.status !== "completed");
+  if (activeDateFilter) list = list.filter(i => i.date === activeDateFilter);
+  list = applyFilters(list, activeSubjectFilter.value, activeSearch.value);
 
-  if (list.length === 0) {
-    emptyState.classList.remove("hidden");
-    return;
-  }
+  if (list.length === 0) { emptyState.classList.remove("hidden"); return; }
   emptyState.classList.add("hidden");
 
-  for (const item of list) {
-    const li = document.createElement("li");
-    li.className = "rounded-xl border border-zinc-800 bg-zinc-900/60 p-3";
-    const whenTop = [`Start: ${fmtDate(item.start_date)}`, `Due: ${fmtDate(item.date)}`].join(" • ");
-    const timeText = fmtTime(item.time);
-
-    li.innerHTML = `
-      <div class="flex items-start justify-between gap-3">
-        <div>
-          <div class="flex items-center gap-2">
-            ${subjectBadge(item.subject)}
-            <div class="text-xs text-zinc-300 font-medium">${item.type.toUpperCase()}</div>
-          </div>
-          <div class="font-semibold mt-0.5">${item.title}</div>
-          <div class="text-sm text-zinc-400">${whenTop}${timeText ? ` • ${timeText}` : ""}</div>
-          ${item.notes ? `<div class="text-sm text-zinc-300 mt-1">${item.notes}</div>` : ""}
-        </div>
-        <div class="flex items-center gap-1 shrink-0">
-          <button class="btnComplete rounded-md border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800" data-id="${item.id}" title="Mark complete">✓</button>
-          <button class="btnEdit rounded-md border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800" data-id="${item.id}" title="Edit">✎</button>
-          <button class="btnDelete rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-xs hover:bg-red-900/40 border-red-900/40 text-red-300" data-id="${item.id}" title="Delete">🗑</button>
-        </div>
-      </div>
+  for (const it of list) {
+    const tr = document.createElement("tr");
+    tr.className = "hover:bg-zinc-900";
+    tr.innerHTML = `
+      <td class="p-3 align-top">${subjectDot(it.subject)}</td>
+      <td class="p-3 align-top">${it.subject}</td>
+      <td class="p-3 align-top">${it.type}</td>
+      <td class="p-3 align-top font-medium">${it.title}</td>
+      <td class="p-3 align-top">${fmtDate(it.start_date)}</td>
+      <td class="p-3 align-top">${fmtDate(it.date)}</td>
+      <td class="p-3 align-top">${fmtTime(it.time)}</td>
+      <td class="p-3 align-top">${it.notes ?? ""}</td>
+      <td class="p-3 align-top">
+        <button class="btnDone text-xs rounded-md border border-zinc-700 px-2 py-1 hover:bg-zinc-800" data-id="${it.id}">Mark as Done</button>
+        <button class="btnEdit text-xs rounded-md border border-zinc-700 px-2 py-1 hover:bg-zinc-800" data-id="${it.id}">Edit</button>
+        <button class="btnDelete text-xs rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 hover:bg-red-900/40 border-red-900/40 text-red-300" data-id="${it.id}">Delete</button>
+      </td>
     `;
-    itemsList.appendChild(li);
+    activeTbody.appendChild(tr);
   }
 }
 
-// Event delegation for active list buttons
-itemsList.addEventListener("click", async (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
+// Active table actions (delegation)
+activeTbody.addEventListener("click", async (e) => {
+  const btn = e.target.closest("button"); if (!btn) return;
   const id = btn.getAttribute("data-id");
-  const item = allItems.find(i => i.id === id);
-  if (!item) return;
+  const item = allItems.find(i => i.id === id); if (!item) return;
 
-  if (btn.classList.contains("btnComplete")) {
+  if (btn.classList.contains("btnDone")) {
     const patch = { status: "completed", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() };
     const { error } = await supabase.from("items").update(patch).eq("id", id);
     if (error) { console.error(error); alert("Could not mark complete."); return; }
     item.status = "completed";
     item.completed_at = patch.completed_at;
-    renderActiveItems();
-    renderCompletedTable();
-    renderCalendar();
+    renderActiveTable(); renderCompletedTable(); renderCalendar();
   } else if (btn.classList.contains("btnEdit")) {
     openEdit(item);
   } else if (btn.classList.contains("btnDelete")) {
@@ -229,33 +222,31 @@ itemsList.addEventListener("click", async (e) => {
     const { error } = await supabase.from("items").delete().eq("id", id);
     if (error) { console.error(error); alert("Delete failed."); return; }
     allItems = allItems.filter(i => i.id !== id);
-    renderActiveItems();
-    renderCalendar();
+    renderActiveTable(); renderCalendar();
   }
 });
 
 // -------------------- RENDER: COMPLETED TABLE --------------------
 function renderCompletedTable() {
   completedTbody.innerHTML = "";
-  const completed = allItems.filter(i => i.status === "completed");
+  let list = allItems.filter(i => i.status === "completed");
+  list = applyFilters(list, completedSubjectFilter.value, completedSearch.value);
 
-  if (completed.length === 0) {
-    completedEmpty.classList.remove("hidden");
-  } else {
-    completedEmpty.classList.add("hidden");
-  }
+  if (list.length === 0) { completedEmpty.classList.remove("hidden"); }
+  else { completedEmpty.classList.add("hidden"); }
 
-  for (const it of completed) {
+  for (const it of list) {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-zinc-900";
     tr.innerHTML = `
+      <td class="p-3 align-top">${subjectDot(it.subject)}</td>
       <td class="p-3 align-top">${it.subject}</td>
       <td class="p-3 align-top">${it.type}</td>
       <td class="p-3 align-top font-medium">${it.title}</td>
       <td class="p-3 align-top">${fmtDate(it.start_date)}</td>
       <td class="p-3 align-top">${fmtDate(it.date)}</td>
       <td class="p-3 align-top">${fmtTime(it.time)}</td>
-      <td class="p-3 align-top">${it.notes ? it.notes : ""}</td>
+      <td class="p-3 align-top">${it.notes ?? ""}</td>
       <td class="p-3 align-top">
         <button class="btnUndo text-xs rounded-md border border-zinc-700 px-2 py-1 hover:bg-zinc-800" data-id="${it.id}">Undo</button>
         <button class="btnDelete text-xs rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 hover:bg-red-900/40 border-red-900/40 text-red-300" data-id="${it.id}">Delete</button>
@@ -265,47 +256,41 @@ function renderCompletedTable() {
   }
 }
 
-// Event delegation for completed table
+// Completed table actions (delegation)
 completedTbody.addEventListener("click", async (e) => {
-  const btn = e.target.closest("button");
-  if (!btn) return;
+  const btn = e.target.closest("button"); if (!btn) return;
   const id = btn.getAttribute("data-id");
-  const item = allItems.find(i => i.id === id);
-  if (!item) return;
+  const item = allItems.find(i => i.id === id); if (!item) return;
 
   if (btn.classList.contains("btnUndo")) {
     const patch = { status: "pending", completed_at: null, updated_at: new Date().toISOString() };
     const { error } = await supabase.from("items").update(patch).eq("id", id);
     if (error) { console.error(error); alert("Could not undo complete."); return; }
-    item.status = "pending";
-    item.completed_at = null;
-    renderCompletedTable();
-    renderActiveItems();
-    renderCalendar();
+    item.status = "pending"; item.completed_at = null;
     setTab("active");
+    renderCompletedTable(); renderActiveTable(); renderCalendar();
   } else if (btn.classList.contains("btnDelete")) {
     if (!confirm("Delete this item?")) return;
     const { error } = await supabase.from("items").delete().eq("id", id);
     if (error) { console.error(error); alert("Delete failed."); return; }
     allItems = allItems.filter(i => i.id !== id);
-    renderCompletedTable();
-    renderCalendar();
+    renderCompletedTable(); renderCalendar();
   }
 });
 
-// -------------------- RENDER: CALENDAR (subject-colored counts) --------------------
+// -------------------- CALENDAR (subject-colored counts) --------------------
 function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
-function daysInMonth(d) { return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
+function daysInMonth(d)  { return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
 
 function renderCalendar() {
   const base = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
   calTitle.textContent = monthTitle(base);
   calendarGrid.innerHTML = "";
 
-  const firstDow = startOfMonth(base).getDay(); // 0 Sun..6 Sat
+  const firstDow  = startOfMonth(base).getDay(); // 0 Sun..6 Sat
   const totalDays = daysInMonth(base);
 
-  // Build per-day counts by SUBJECT (only pending items)
+  // Per-day counts by SUBJECT (only pending)
   const counts = {};
   for (const it of allItems.filter(i => i.status !== "completed")) {
     const d = new Date(it.date + "T00:00:00");
@@ -329,7 +314,6 @@ function renderCalendar() {
     const bySubject = counts[key] || {};
     const isToday = key === todayKey;
 
-    // Render up to 4 subject rows (avoid overflowing)
     const subjects = Object.keys(bySubject).sort((a,b)=>bySubject[b]-bySubject[a]);
     const topFour = subjects.slice(0,4);
     const more = subjects.length - topFour.length;
@@ -352,7 +336,7 @@ function renderCalendar() {
         <div class="text-sm ${isToday ? "text-white font-semibold" : "text-zinc-300"}">${day}</div>
       </div>
       <div class="mt-2 space-y-1 text-xs">
-        ${rows || `<span class="text-zinc-500">—</span>`}
+        ${rows || ""}  <!-- blank if none -->
         ${more > 0 ? `<div class="text-zinc-400">+${more} more</div>` : ""}
       </div>
     `;
@@ -362,18 +346,18 @@ function renderCalendar() {
       filterLabel.textContent = new Date(key).toLocaleDateString();
       dayFilterBar.classList.remove("hidden");
       setTab("active");
-      renderActiveItems();
+      renderActiveTable();
     });
 
     calendarGrid.appendChild(cell);
   }
 }
 
-// Calendar controls
+// Calendar controls (unstyled text)
 prevMonth.addEventListener("click", () => { currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()-1, 1); renderCalendar(); });
 nextMonth.addEventListener("click", () => { currentMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth()+1, 1); renderCalendar(); });
 todayBtn.addEventListener("click", () => { currentMonth = new Date(); renderCalendar(); });
-clearFilter.addEventListener("click", () => { activeDateFilter = null; dayFilterBar.classList.add("hidden"); renderActiveItems(); });
+clearFilter.addEventListener("click", () => { activeDateFilter = null; dayFilterBar.classList.add("hidden"); renderActiveTable(); });
 
 // -------------------- ADD / EDIT --------------------
 function openAdd(subject) {
@@ -382,13 +366,12 @@ function openAdd(subject) {
   addMsg.textContent = "";
   addForm.reset();
 
-  subjectInput.value   = subject;
-  startDateInput.valueAsDate = new Date(); // default today
-  dueDateInput.value   = "";               // require choose
-  timeInput.value      = "";
-  // typeInput defaults to Homework as per HTML
-  titleInput.value     = "";
-  notesInput.value     = "";
+  subjectInput.value = subject;
+  startDateInput.valueAsDate = new Date();
+  dueDateInput.value = "";
+  timeInput.value = "";
+  titleInput.value = "";
+  notesInput.value = "";
 
   addModal.classList.remove("hidden");
 }
@@ -408,8 +391,6 @@ function openEdit(item) {
   addModal.classList.remove("hidden");
 }
 function closeModal() { addModal.classList.add("hidden"); }
-
-// Subject button -> open modal
 subjectBar.addEventListener("click", (e) => {
   const btn = e.target.closest(".subjectBtn");
   if (!btn) return;
@@ -418,7 +399,7 @@ subjectBar.addEventListener("click", (e) => {
 closeAdd?.addEventListener("click", closeModal);
 cancelAdd?.addEventListener("click", closeModal);
 
-// Insert or update on submit (Title required)
+// Insert or update
 addForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   addMsg.textContent = "Saving…";
@@ -428,18 +409,15 @@ addForm?.addEventListener("submit", async (e) => {
 
   const payload = {
     subject:    subjectInput.value,
-    type:       (typeInput.value || "Other").toLowerCase(), // 'homework' | 'exam' | 'event' | 'other'
+    type:       (typeInput.value || "Other").toLowerCase(),
     title:      titleVal,
     start_date: startDateInput.value || iso(new Date()),
-    date:       dueDateInput.value, // due date (required by HTML)
+    date:       dueDateInput.value,
     time:       timeInput.value ? `${timeInput.value}:00` : null,
     notes:      (notesInput.value || "").trim() || null,
   };
 
-  if (!payload.subject || !payload.date) {
-    addMsg.textContent = "Please select subject and due date.";
-    return;
-  }
+  if (!payload.subject || !payload.date) { addMsg.textContent = "Please select subject and due date."; return; }
 
   let error;
   if (editId.value) {
@@ -459,3 +437,5 @@ addForm?.addEventListener("submit", async (e) => {
 tabActive.addEventListener("click", () => setTab("active"));
 tabCompleted.addEventListener("click", () => setTab("completed"));
 setTab("active");
+
+
