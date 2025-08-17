@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Student Planner — Shared</title>
+    <title>ArpeetPlanner</title>
 
     <!-- Tailwind via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -22,14 +22,14 @@
       <!-- Header -->
       <header class="flex items-center justify-between mb-8">
         <h1 class="text-xl font-bold">
-          Student<span class="text-zinc-400">Planner</span> <span class="text-xs text-zinc-400">(shared)</span>
+          Arpeet<span class="text-zinc-400">Planner</span>
         </h1>
         <div id="authArea" class="text-sm text-zinc-300"></div>
       </header>
 
       <!-- Login card -->
       <section id="loginCard" class="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 shadow-xl max-w-md">
-        <h2 class="text-lg font-semibold mb-4">Log in to shared calendar</h2>
+        <h2 class="text-lg font-semibold mb-4">Log in</h2>
         <div class="space-y-3">
           <div>
             <label class="block text-sm mb-1" for="email">Email</label>
@@ -51,27 +51,23 @@
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold">Planner</h2>
           <div class="flex items-center gap-2">
-            <span id="signedInBadge" class="hidden text-xs text-emerald-300">✅ Signed in</span>
+            <!-- Signed-in badge removed per your request -->
             <button id="signOutBtn" class="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800 transition">
               Sign out
             </button>
           </div>
         </div>
 
-        <!-- Quick-add bar with icons -->
-        <div class="mb-4 flex flex-wrap gap-2">
-          <button data-type="event" class="addBtn inline-flex items-center gap-2 rounded-lg bg-sky-500/20 text-sky-200 border border-sky-600/40 px-3 py-1.5 text-sm hover:bg-sky-500/30">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M8 3v4M16 3v4M3 9h18" stroke="currentColor" stroke-width="1.5"/></svg>
-            Add Event
-          </button>
-          <button data-type="homework" class="addBtn inline-flex items-center gap-2 rounded-lg bg-fuchsia-500/20 text-fuchsia-200 border border-fuchsia-600/40 px-3 py-1.5 text-sm hover:bg-fuchsia-500/30">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect x="6" y="3" width="12" height="18" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M6 8h12M9 12h6M9 16h6" stroke="currentColor" stroke-width="1.5"/><path d="M6 3v18" stroke="currentColor" stroke-width="1.5"/></svg>
-            Add Homework
-          </button>
-          <button data-type="exam" class="addBtn inline-flex items-center gap-2 rounded-lg bg-amber-500/20 text-amber-200 border border-amber-600/40 px-3 py-1.5 text-sm hover:bg-amber-500/30">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3l8 3v5c0 5-3.5 9-8 10-4.5-1-8-5-8-10V6l8-3z" stroke="currentColor" stroke-width="1.5"/><path d="M9 12l2.2 2.2L15 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            Add Exam
-          </button>
+        <!-- Subject buttons (8) -->
+        <div id="subjectBar" class="mb-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="Tennis">Tennis</button>
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="GT">GT</button>
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="AP Comp Sci">AP Comp Sci</button>
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="AP Hum Geo">AP Hum Geo</button>
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="Spanish 3">Spanish 3</button>
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="Bio">Bio</button>
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="PreCalc">PreCalc</button>
+          <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="Other">Other</button>
         </div>
 
         <!-- Calendar -->
@@ -124,9 +120,11 @@
             <table class="min-w-full text-sm">
               <thead class="bg-zinc-900 text-zinc-300">
                 <tr>
+                  <th class="text-left p-3">Subject</th>
                   <th class="text-left p-3">Type</th>
                   <th class="text-left p-3">Title</th>
-                  <th class="text-left p-3">Date</th>
+                  <th class="text-left p-3">Start</th>
+                  <th class="text-left p-3">Due</th>
                   <th class="text-left p-3">Time</th>
                   <th class="text-left p-3">Notes</th>
                   <th class="text-left p-3">Actions</th>
@@ -151,22 +149,43 @@
         </div>
 
         <form id="addForm" class="space-y-3">
-          <input type="hidden" id="typeInput" />
           <input type="hidden" id="editId" />
 
-          <div>
-            <label class="block text-sm mb-1" for="titleInput">Title</label>
-            <input id="titleInput" required class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="e.g., Math homework" />
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm mb-1">Subject</label>
+              <input id="subjectInput" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" disabled />
+            </div>
+            <div>
+              <label class="block text-sm mb-1" for="typeInput">Type</label>
+              <select id="typeInput" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2">
+                <option>Homework</option>
+                <option>Exam</option>
+                <option>Event</option>
+                <option>Other</option>
+              </select>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-3">
             <div>
-              <label class="block text-sm mb-1" for="dateInput">Date</label>
-              <input id="dateInput" type="date" required class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" />
+              <label class="block text-sm mb-1" for="startDateInput">Start date</label>
+              <input id="startDateInput" type="date" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" />
             </div>
+            <div>
+              <label class="block text-sm mb-1" for="dueDateInput">Due date</label>
+              <input id="dueDateInput" type="date" required class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-sm mb-1" for="timeInput">Time (optional)</label>
               <input id="timeInput" type="time" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" />
+            </div>
+            <div>
+              <label class="block text-sm mb-1" for="titleInput">Title (optional)</label>
+              <input id="titleInput" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="e.g., Read Ch. 5" />
             </div>
           </div>
 
@@ -177,7 +196,7 @@
 
           <div class="flex items-center justify-end gap-2 pt-1">
             <button type="button" id="cancelAdd" class="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800">Cancel</button>
-            <button type="submit" class="rounded-lg bg-white text-zinc-900 px-4 py-1.5 text-sm font-semibold hover:opacity-90">Save</button>
+            <button type="submit" class="rounded-lg bg-white text-zinc-900 px-4 py-1.5 text-sm font-semibold hover:opacity-90">Done</button>
           </div>
 
           <p id="addMsg" class="text-sm text-zinc-400"></p>
@@ -186,7 +205,7 @@
     </div>
 
     <footer class="py-10 text-center text-xs text-zinc-500">
-      © <span id="year"></span> StudentPlanner
+      © <span id="year"></span> ArpeetPlanner
     </footer>
 
     <!-- App logic -->
