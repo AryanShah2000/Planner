@@ -51,14 +51,14 @@
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold">Planner</h2>
           <div class="flex items-center gap-2">
-            <!-- Signed-in badge removed per your request -->
+            <!-- “Signed in” badge intentionally removed -->
             <button id="signOutBtn" class="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800 transition">
               Sign out
             </button>
           </div>
         </div>
 
-        <!-- Subject buttons (8) -->
+        <!-- Subject buttons (8) — colors are applied by app.js -->
         <div id="subjectBar" class="mb-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="Tennis">Tennis</button>
           <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="GT">GT</button>
@@ -76,6 +76,7 @@
             <div class="flex items-center gap-3">
               <h3 id="calTitle" class="font-semibold"></h3>
               <div class="flex items-center gap-3 text-xs text-zinc-400">
+                <!-- Legend text only; actual per-day dots are subject colors -->
                 <span class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-sky-400"></span> events</span>
                 <span class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-fuchsia-400"></span> homework</span>
                 <span class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-amber-400"></span> exams</span>
@@ -148,9 +149,11 @@
           <button id="closeAdd" class="text-zinc-400 hover:text-white">✕</button>
         </div>
 
+        <!-- FORM: Title required, Start/Due, Time, Notes -->
         <form id="addForm" class="space-y-3">
           <input type="hidden" id="editId" />
 
+          <!-- Subject + Type -->
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-sm mb-1">Subject</label>
@@ -167,6 +170,13 @@
             </div>
           </div>
 
+          <!-- Title (REQUIRED) -->
+          <div>
+            <label class="block text-sm mb-1" for="titleInput">Title</label>
+            <input id="titleInput" required class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="e.g., Read Ch. 5" />
+          </div>
+
+          <!-- Start / Due -->
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-sm mb-1" for="startDateInput">Start date</label>
@@ -178,20 +188,16 @@
             </div>
           </div>
 
+          <!-- Time + Notes -->
           <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="block text-sm mb-1" for="timeInput">Time (optional)</label>
               <input id="timeInput" type="time" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" />
             </div>
             <div>
-              <label class="block text-sm mb-1" for="titleInput">Title (optional)</label>
-              <input id="titleInput" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="e.g., Read Ch. 5" />
+              <label class="block text-sm mb-1" for="notesInput">Notes (optional)</label>
+              <input id="notesInput" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="Any details..." />
             </div>
-          </div>
-
-          <div>
-            <label class="block text-sm mb-1" for="notesInput">Notes (optional)</label>
-            <textarea id="notesInput" rows="3" class="w-full rounded-lg bg-zinc-800/70 border border-zinc-700 px-3 py-2" placeholder="Any details..."></textarea>
           </div>
 
           <div class="flex items-center justify-end gap-2 pt-1">
