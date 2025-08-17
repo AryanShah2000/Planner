@@ -51,14 +51,14 @@
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold">Planner</h2>
           <div class="flex items-center gap-2">
-            <!-- “Signed in” badge intentionally removed -->
+            <span class="text-xs text-zinc-400"></span>
             <button id="signOutBtn" class="rounded-lg border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800 transition">
               Sign out
             </button>
           </div>
         </div>
 
-        <!-- Subject buttons (8) — colors are applied by app.js -->
+        <!-- Subject buttons (8) — colors applied by app.js -->
         <div id="subjectBar" class="mb-4 grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
           <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="Tennis">Tennis</button>
           <button class="subjectBtn rounded-lg px-3 py-1.5 text-sm font-medium border" data-subject="GT">GT</button>
@@ -75,17 +75,11 @@
           <div class="flex items-center justify-between mb-3">
             <div class="flex items-center gap-3">
               <h3 id="calTitle" class="font-semibold"></h3>
-              <div class="flex items-center gap-3 text-xs text-zinc-400">
-                <!-- Legend text only; actual per-day dots are subject colors -->
-                <span class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-sky-400"></span> events</span>
-                <span class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-fuchsia-400"></span> homework</span>
-                <span class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-amber-400"></span> exams</span>
-              </div>
             </div>
-            <div class="flex items-center gap-2">
-              <button id="prevMonth" class="rounded-lg border border-zinc-700 px-2 py-1 text-sm hover:bg-zinc-800">◀</button>
-              <button id="todayBtn" class="rounded-lg border border-zinc-700 px-2 py-1 text-sm hover:bg-zinc-800">Today</button>
-              <button id="nextMonth" class="rounded-lg border border-zinc-700 px-2 py-1 text-sm hover:bg-zinc-800">▶</button>
+            <div class="flex items-center gap-3 text-sm">
+              <span id="prevMonth" class="cursor-pointer text-zinc-300 hover:text-white select-none">◀ Prev</span>
+              <span id="todayBtn" class="cursor-pointer text-zinc-300 hover:text-white select-none">Today</span>
+              <span id="nextMonth" class="cursor-pointer text-zinc-300 hover:text-white select-none">Next ▶</span>
             </div>
           </div>
           <div class="grid grid-cols-7 gap-2 text-center text-xs text-zinc-400 mb-2">
@@ -104,23 +98,56 @@
           <button id="tabCompleted" class="tabBtn rounded-lg px-3 py-1.5 text-sm border border-zinc-700 text-zinc-300 hover:bg-zinc-800">Completed Items</button>
         </div>
 
-        <!-- Active items list -->
+        <!-- Filters for Active -->
+        <div id="activeFilters" class="mb-2 flex flex-wrap items-center gap-2">
+          <select id="activeSubjectFilter" class="rounded-lg bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm">
+            <option value="">All Subjects</option>
+            <option>Tennis</option><option>GT</option><option>AP Comp Sci</option><option>AP Hum Geo</option>
+            <option>Spanish 3</option><option>Bio</option><option>PreCalc</option><option>Other</option>
+          </select>
+          <input id="activeSearch" placeholder="Search title/notes" class="rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-1.5 text-sm flex-1 min-w-48" />
+        </div>
+        <!-- Active items table -->
         <div id="activePane">
-          <div class="text-xs text-zinc-400 mb-2">
-            Click ✓ to complete, ✎ to edit, 🗑 to delete.
+          <div class="overflow-x-auto rounded-xl border border-zinc-800">
+            <table class="min-w-full text-sm">
+              <thead class="bg-zinc-900 text-zinc-300">
+                <tr>
+                  <th class="text-left p-3 w-8"></th>
+                  <th class="text-left p-3">Subject</th>
+                  <th class="text-left p-3">Type</th>
+                  <th class="text-left p-3">Title</th>
+                  <th class="text-left p-3">Start</th>
+                  <th class="text-left p-3">Due</th>
+                  <th class="text-left p-3">Time</th>
+                  <th class="text-left p-3">Notes</th>
+                  <th class="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="activeTbody" class="divide-y divide-zinc-800 bg-zinc-950"></tbody>
+            </table>
           </div>
-          <div id="emptyState" class="hidden text-sm text-zinc-400 border border-dashed border-zinc-700 rounded-xl p-6">
-            No active items. Add something above or check Completed Items.
-          </div>
-          <ul id="itemsList" class="space-y-2"></ul>
+          <p id="emptyState" class="hidden mt-3 text-sm text-zinc-400 border border-dashed border-zinc-700 rounded-xl p-6">
+            No active items.
+          </p>
         </div>
 
+        <!-- Filters for Completed -->
+        <div id="completedFilters" class="hidden mb-2 flex flex-wrap items-center gap-2">
+          <select id="completedSubjectFilter" class="rounded-lg bg-zinc-900 border border-zinc-700 px-2 py-1 text-sm">
+            <option value="">All Subjects</option>
+            <option>Tennis</option><option>GT</option><option>AP Comp Sci</option><option>AP Hum Geo</option>
+            <option>Spanish 3</option><option>Bio</option><option>PreCalc</option><option>Other</option>
+          </select>
+          <input id="completedSearch" placeholder="Search title/notes" class="rounded-lg bg-zinc-900 border border-zinc-700 px-3 py-1.5 text-sm flex-1 min-w-48" />
+        </div>
         <!-- Completed items table -->
         <div id="completedPane" class="hidden">
           <div class="overflow-x-auto rounded-xl border border-zinc-800">
             <table class="min-w-full text-sm">
               <thead class="bg-zinc-900 text-zinc-300">
                 <tr>
+                  <th class="text-left p-3 w-8"></th>
                   <th class="text-left p-3">Subject</th>
                   <th class="text-left p-3">Type</th>
                   <th class="text-left p-3">Title</th>
@@ -149,7 +176,7 @@
           <button id="closeAdd" class="text-zinc-400 hover:text-white">✕</button>
         </div>
 
-        <!-- FORM: Title required, Start/Due, Time, Notes -->
+        <!-- FORM -->
         <form id="addForm" class="space-y-3">
           <input type="hidden" id="editId" />
 
