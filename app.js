@@ -4,7 +4,6 @@ const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 
-
 // -------------------- DOM --------------------
 const loginCard    = document.getElementById("loginCard");
 const itemsSection = document.getElementById("itemsSection");
@@ -12,7 +11,9 @@ const loginBtn     = document.getElementById("loginBtn");
 const signOutBtn   = document.getElementById("signOutBtn");
 const loginMsg     = document.getElementById("loginMsg");
 const authArea     = document.getElementById("authArea");
-const signedInBadge= document.getElementById("signedInBadge");
+
+// Subject bar
+const subjectBar = document.getElementById("subjectBar");
 
 // Tabs & panes
 const tabActive     = document.getElementById("tabActive");
@@ -29,18 +30,20 @@ const completedTbody = document.getElementById("completedTbody");
 const completedEmpty = document.getElementById("completedEmpty");
 
 // Add/Edit modal
-const addModal   = document.getElementById("addModal");
-const addTitle   = document.getElementById("addTitle");
-const addForm    = document.getElementById("addForm");
-const addMsg     = document.getElementById("addMsg");
-const typeInput  = document.getElementById("typeInput");
-const titleInput = document.getElementById("titleInput");
-const dateInput  = document.getElementById("dateInput");
-const timeInput  = document.getElementById("timeInput");
-const notesInput = document.getElementById("notesInput");
-const closeAdd   = document.getElementById("closeAdd");
-const cancelAdd  = document.getElementById("cancelAdd");
-const editId     = document.getElementById("editId");
+const addModal        = document.getElementById("addModal");
+const addTitle        = document.getElementById("addTitle");
+const addForm         = document.getElementById("addForm");
+const addMsg          = document.getElementById("addMsg");
+const editId          = document.getElementById("editId");
+const subjectInput    = document.getElementById("subjectInput");
+const typeInput       = document.getElementById("typeInput");
+const startDateInput  = document.getElementById("startDateInput");
+const dueDateInput    = document.getElementById("dueDateInput");
+const timeInput       = document.getElementById("timeInput");
+const titleInput      = document.getElementById("titleInput");
+const notesInput      = document.getElementById("notesInput");
+const closeAdd        = document.getElementById("closeAdd");
+const cancelAdd       = document.getElementById("cancelAdd");
 
 // Calendar
 const calTitle     = document.getElementById("calTitle");
@@ -57,6 +60,24 @@ let allItems = [];
 let currentMonth = new Date();
 let activeDateFilter = null;   // 'YYYY-MM-DD'
 let currentTab = "active";     // 'active' | 'completed'
+
+// Subject colors (button + badges)
+const subjectStyles = {
+  "Tennis":     { btn: "bg-emerald-500/20 text-emerald-200 border-emerald-700/40", dot: "bg-emerald-400" },
+  "GT":         { btn: "bg-cyan-500/20 text-cyan-200 border-cyan-700/40",         dot: "bg-cyan-400" },
+  "AP Comp Sci":{ btn: "bg-indigo-500/20 text-indigo-200 border-indigo-700/40",   dot: "bg-indigo-400" },
+  "AP Hum Geo": { btn: "bg-rose-500/20 text-rose-200 border-rose-700/40",         dot: "bg-rose-400" },
+  "Spanish 3":  { btn: "bg-teal-500/20 text-teal-200 border-teal-700/40",         dot: "bg-teal-400" },
+  "Bio":        { btn: "bg-lime-500/20 text-lime-200 border-lime-700/40",         dot: "bg-lime-400" },
+  "PreCalc":    { btn: "bg-orange-500/20 text-orange-200 border-orange-700/40",   dot: "bg-orange-400" },
+  "Other":      { btn: "bg-zinc-600/20 text-zinc-200 border-zinc-700/40",         dot: "bg-zinc-400" },
+};
+
+// Apply colors to subject buttons
+subjectBar.querySelectorAll(".subjectBtn").forEach(btn => {
+  const s = btn.getAttribute("data-subject");
+  btn.classList.add(...subjectStyles[s].btn.split(" "), "border");
+});
 
 // -------------------- HELPERS --------------------
 function fmtDate(d) {
@@ -77,7 +98,6 @@ function setAuthedUI(email) {
   authArea.textContent = email ? `Signed in as ${email}` : "";
   loginCard.classList.toggle("hidden", !!email);
   itemsSection.classList.toggle("hidden", !email);
-  signedInBadge.classList.toggle("hidden", !email);
 }
 function monthTitle(dateObj) {
   return dateObj.toLocaleString(undefined, { month: 'long', year: 'numeric' });
@@ -138,6 +158,13 @@ async function loadItems() {
 }
 
 // -------------------- RENDER: ACTIVE LIST --------------------
+function subjectBadge(subject) {
+  const dot = subjectStyles[subject]?.dot || "bg-zinc-400";
+  return `<span class="inline-flex items-center gap-1 text-xs text-zinc-300">
+    <span class="inline-block size-2 rounded-full ${dot}"></span>${subject}
+  </span>`;
+}
+
 function renderActiveItems() {
   itemsList.innerHTML = "";
 
@@ -154,18 +181,23 @@ function renderActiveItems() {
   for (const item of list) {
     const li = document.createElement("li");
     li.className = "rounded-xl border border-zinc-800 bg-zinc-900/60 p-3";
-    const color =
+    const typeColor =
       item.type === "event" ? "text-sky-300"
       : item.type === "homework" ? "text-fuchsia-300"
-      : "text-amber-300";
-    const when = [fmtDate(item.date), fmtTime(item.time)].filter(Boolean).join(" • ");
+      : item.type === "exam" ? "text-amber-300"
+      : "text-zinc-300";
+    const whenTop = [`Start: ${fmtDate(item.start_date)}`, `Due: ${fmtDate(item.date)}`].join(" • ");
+    const timeText = fmtTime(item.time);
 
     li.innerHTML = `
       <div class="flex items-start justify-between gap-3">
         <div>
-          <div class="text-sm ${color} font-medium">${item.type.toUpperCase()}</div>
-          <div class="font-semibold">${item.title}</div>
-          <div class="text-sm text-zinc-400">${when || ""}</div>
+          <div class="flex items-center gap-2">
+            ${subjectBadge(item.subject)}
+            <div class="text-xs ${typeColor} font-medium">${item.type.toUpperCase()}</div>
+          </div>
+          ${item.title ? `<div class="font-semibold mt-0.5">${item.title}</div>` : ""}
+          <div class="text-sm text-zinc-400">${whenTop}${timeText ? ` • ${timeText}` : ""}</div>
           ${item.notes ? `<div class="text-sm text-zinc-300 mt-1">${item.notes}</div>` : ""}
         </div>
         <div class="flex items-center gap-1 shrink-0">
@@ -188,11 +220,9 @@ itemsList.addEventListener("click", async (e) => {
   if (!item) return;
 
   if (btn.classList.contains("btnComplete")) {
-    // Mark as completed
     const patch = { status: "completed", completed_at: new Date().toISOString(), updated_at: new Date().toISOString() };
     const { error } = await supabase.from("items").update(patch).eq("id", id);
     if (error) { console.error(error); alert("Could not mark complete."); return; }
-    // Update local state + re-render
     item.status = "completed";
     item.completed_at = patch.completed_at;
     renderActiveItems();
@@ -225,8 +255,10 @@ function renderCompletedTable() {
     const tr = document.createElement("tr");
     tr.className = "hover:bg-zinc-900";
     tr.innerHTML = `
+      <td class="p-3 align-top">${it.subject}</td>
       <td class="p-3 align-top">${it.type}</td>
-      <td class="p-3 align-top font-medium">${it.title}</td>
+      <td class="p-3 align-top font-medium">${it.title || ""}</td>
+      <td class="p-3 align-top">${fmtDate(it.start_date)}</td>
       <td class="p-3 align-top">${fmtDate(it.date)}</td>
       <td class="p-3 align-top">${fmtTime(it.time)}</td>
       <td class="p-3 align-top">${it.notes ? it.notes : ""}</td>
@@ -342,30 +374,44 @@ todayBtn.addEventListener("click", () => { currentMonth = new Date(); renderCale
 clearFilter.addEventListener("click", () => { activeDateFilter = null; dayFilterBar.classList.add("hidden"); renderActiveItems(); });
 
 // -------------------- ADD / EDIT --------------------
-function openAdd(type) {
-  typeInput.value = type; // event | homework | exam
+function openAdd(subject) {
   editId.value = "";
-  addTitle.textContent = `Add ${type[0].toUpperCase() + type.slice(1)}`;
+  addTitle.textContent = `Add to ${subject}`;
   addMsg.textContent = "";
   addForm.reset();
-  dateInput.valueAsDate = new Date();
+
+  subjectInput.value = subject;
+  startDateInput.valueAsDate = new Date(); // default: today
+  dueDateInput.value = ""; // force choose
+  timeInput.value = "";
+  titleInput.value = "";
+  notesInput.value = "";
+
   addModal.classList.remove("hidden");
 }
 function openEdit(item) {
-  typeInput.value = item.type;
   editId.value = item.id;
-  addTitle.textContent = `Edit ${item.type[0].toUpperCase() + item.type.slice(1)}`;
+  addTitle.textContent = `Edit ${item.subject}`;
   addMsg.textContent = "";
-  titleInput.value = item.title;
-  dateInput.value = item.date;
-  timeInput.value = item.time ? item.time.slice(0,5) : "";
-  notesInput.value = item.notes || "";
+
+  subjectInput.value   = item.subject;
+  typeInput.value      = capitalizeFirst(item.type);
+  startDateInput.value = item.start_date;
+  dueDateInput.value   = item.date;
+  timeInput.value      = item.time ? item.time.slice(0,5) : "";
+  titleInput.value     = item.title || "";
+  notesInput.value     = item.notes || "";
+
   addModal.classList.remove("hidden");
 }
 function closeModal() { addModal.classList.add("hidden"); }
+function capitalizeFirst(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 
-document.querySelectorAll(".addBtn").forEach(btn => {
-  btn.addEventListener("click", (e) => openAdd(e.currentTarget.getAttribute("data-type")));
+// Subject button -> open modal
+subjectBar.addEventListener("click", (e) => {
+  const btn = e.target.closest(".subjectBtn");
+  if (!btn) return;
+  openAdd(btn.getAttribute("data-subject"));
 });
 closeAdd?.addEventListener("click", closeModal);
 cancelAdd?.addEventListener("click", closeModal);
@@ -375,15 +421,19 @@ addForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   addMsg.textContent = "Saving…";
 
+  // Map UI fields to DB fields
   const payload = {
-    type:  typeInput.value,
-    title: titleInput.value.trim(),
-    date:  dateInput.value,
-    time:  timeInput.value ? `${timeInput.value}:00` : null,
-    notes: notesInput.value.trim() || null,
+    subject:    subjectInput.value,
+    type:       (typeInput.value || "Other").toLowerCase(), // 'homework' | 'exam' | 'event' | 'other'
+    start_date: startDateInput.value || iso(new Date()),
+    date:       dueDateInput.value, // due date
+    time:       timeInput.value ? `${timeInput.value}:00` : null,
+    title:      (titleInput.value || "").trim() || null,
+    notes:      (notesInput.value || "").trim() || null,
   };
-  if (!payload.type || !payload.title || !payload.date) {
-    addMsg.textContent = "Please fill in type, title, and date.";
+
+  if (!payload.subject || !payload.date) {
+    addMsg.textContent = "Please select subject and due date.";
     return;
   }
 
@@ -404,6 +454,5 @@ addForm?.addEventListener("submit", async (e) => {
 // -------------------- TABS --------------------
 tabActive.addEventListener("click", () => setTab("active"));
 tabCompleted.addEventListener("click", () => setTab("completed"));
-
-// Default tab
 setTab("active");
+
