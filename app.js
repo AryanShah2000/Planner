@@ -3,7 +3,6 @@ const SUPABASE_URL = "https://agbqjevohcvxhmnyodvk.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFnYnFqZXZvaGN2eGhtbnlvZHZrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUyMjU4OTAsImV4cCI6MjA3MDgwMTg5MH0.PkyFEmqJO03xofTSEaRh2576xsYJk_UF1Gz-JV8-KA0";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-
 // -------------------- DOM --------------------
 const loginCard    = document.getElementById("loginCard");
 const itemsSection = document.getElementById("itemsSection");
@@ -61,7 +60,7 @@ let currentMonth = new Date();
 let activeDateFilter = null;   // 'YYYY-MM-DD'
 let currentTab = "active";     // 'active' | 'completed'
 
-// Subject colors (button + badges)
+// Subject colors
 const subjectStyles = {
   "Tennis":     { btn: "bg-emerald-500/20 text-emerald-200 border-emerald-700/40", dot: "bg-emerald-400" },
   "GT":         { btn: "bg-cyan-500/20 text-cyan-200 border-cyan-700/40",         dot: "bg-cyan-400" },
@@ -73,7 +72,7 @@ const subjectStyles = {
   "Other":      { btn: "bg-zinc-600/20 text-zinc-200 border-zinc-700/40",         dot: "bg-zinc-400" },
 };
 
-// Apply colors to subject buttons
+// Style subject buttons
 subjectBar.querySelectorAll(".subjectBtn").forEach(btn => {
   const s = btn.getAttribute("data-subject");
   btn.classList.add(...subjectStyles[s].btn.split(" "), "border");
@@ -181,11 +180,6 @@ function renderActiveItems() {
   for (const item of list) {
     const li = document.createElement("li");
     li.className = "rounded-xl border border-zinc-800 bg-zinc-900/60 p-3";
-    const typeColor =
-      item.type === "event" ? "text-sky-300"
-      : item.type === "homework" ? "text-fuchsia-300"
-      : item.type === "exam" ? "text-amber-300"
-      : "text-zinc-300";
     const whenTop = [`Start: ${fmtDate(item.start_date)}`, `Due: ${fmtDate(item.date)}`].join(" • ");
     const timeText = fmtTime(item.time);
 
@@ -194,9 +188,9 @@ function renderActiveItems() {
         <div>
           <div class="flex items-center gap-2">
             ${subjectBadge(item.subject)}
-            <div class="text-xs ${typeColor} font-medium">${item.type.toUpperCase()}</div>
+            <div class="text-xs text-zinc-300 font-medium">${item.type.toUpperCase()}</div>
           </div>
-          ${item.title ? `<div class="font-semibold mt-0.5">${item.title}</div>` : ""}
+          <div class="font-semibold mt-0.5">${item.title}</div>
           <div class="text-sm text-zinc-400">${whenTop}${timeText ? ` • ${timeText}` : ""}</div>
           ${item.notes ? `<div class="text-sm text-zinc-300 mt-1">${item.notes}</div>` : ""}
         </div>
@@ -257,7 +251,7 @@ function renderCompletedTable() {
     tr.innerHTML = `
       <td class="p-3 align-top">${it.subject}</td>
       <td class="p-3 align-top">${it.type}</td>
-      <td class="p-3 align-top font-medium">${it.title || ""}</td>
+      <td class="p-3 align-top font-medium">${it.title}</td>
       <td class="p-3 align-top">${fmtDate(it.start_date)}</td>
       <td class="p-3 align-top">${fmtDate(it.date)}</td>
       <td class="p-3 align-top">${fmtTime(it.time)}</td>
@@ -299,7 +293,7 @@ completedTbody.addEventListener("click", async (e) => {
   }
 });
 
-// -------------------- RENDER: CALENDAR --------------------
+// -------------------- RENDER: CALENDAR (subject-colored counts) --------------------
 function startOfMonth(d) { return new Date(d.getFullYear(), d.getMonth(), 1); }
 function daysInMonth(d) { return new Date(d.getFullYear(), d.getMonth()+1, 0).getDate(); }
 
@@ -311,14 +305,14 @@ function renderCalendar() {
   const firstDow = startOfMonth(base).getDay(); // 0 Sun..6 Sat
   const totalDays = daysInMonth(base);
 
-  // Counts per date: only PENDING items
+  // Build per-day counts by SUBJECT (only pending items)
   const counts = {};
   for (const it of allItems.filter(i => i.status !== "completed")) {
     const d = new Date(it.date + "T00:00:00");
     if (d.getMonth() !== base.getMonth() || d.getFullYear() !== base.getFullYear()) continue;
     const k = iso(d);
-    counts[k] ||= { event:0, homework:0, exam:0 };
-    counts[k][it.type] += 1;
+    counts[k] ||= {};
+    counts[k][it.subject] = (counts[k][it.subject] || 0) + 1;
   }
 
   // Leading blanks
@@ -328,13 +322,22 @@ function renderCalendar() {
     calendarGrid.appendChild(cell);
   }
 
-  // Days
   const todayKey = iso(new Date());
   for (let day=1; day<=totalDays; day++) {
     const cellDate = new Date(base.getFullYear(), base.getMonth(), day);
     const key = iso(cellDate);
-    const c = counts[key] || { event:0, homework:0, exam:0 };
+    const bySubject = counts[key] || {};
     const isToday = key === todayKey;
+
+    // Render up to 4 subject rows (avoid overflowing)
+    const subjects = Object.keys(bySubject).sort((a,b)=>bySubject[b]-bySubject[a]);
+    const topFour = subjects.slice(0,4);
+    const more = subjects.length - topFour.length;
+
+    const rows = topFour.map(s => {
+      const dot = subjectStyles[s]?.dot || "bg-zinc-400";
+      return `<div class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full ${dot}"></span>${bySubject[s]} ${s}</div>`;
+    }).join("");
 
     const cell = document.createElement("button");
     cell.className = [
@@ -349,9 +352,8 @@ function renderCalendar() {
         <div class="text-sm ${isToday ? "text-white font-semibold" : "text-zinc-300"}">${day}</div>
       </div>
       <div class="mt-2 space-y-1 text-xs">
-        ${c.event ? `<div class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-sky-400"></span>${c.event} events</div>` : ""}
-        ${c.homework ? `<div class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-fuchsia-400"></span>${c.homework} homework</div>` : ""}
-        ${c.exam ? `<div class="inline-flex items-center gap-1"><span class="inline-block size-2 rounded-full bg-amber-400"></span>${c.exam} exams</div>` : ""}
+        ${rows || `<span class="text-zinc-500">—</span>`}
+        ${more > 0 ? `<div class="text-zinc-400">+${more} more</div>` : ""}
       </div>
     `;
 
@@ -380,12 +382,13 @@ function openAdd(subject) {
   addMsg.textContent = "";
   addForm.reset();
 
-  subjectInput.value = subject;
-  startDateInput.valueAsDate = new Date(); // default: today
-  dueDateInput.value = ""; // force choose
-  timeInput.value = "";
-  titleInput.value = "";
-  notesInput.value = "";
+  subjectInput.value   = subject;
+  startDateInput.valueAsDate = new Date(); // default today
+  dueDateInput.value   = "";               // require choose
+  timeInput.value      = "";
+  // typeInput defaults to Homework as per HTML
+  titleInput.value     = "";
+  notesInput.value     = "";
 
   addModal.classList.remove("hidden");
 }
@@ -395,7 +398,7 @@ function openEdit(item) {
   addMsg.textContent = "";
 
   subjectInput.value   = item.subject;
-  typeInput.value      = capitalizeFirst(item.type);
+  typeInput.value      = item.type[0].toUpperCase() + item.type.slice(1);
   startDateInput.value = item.start_date;
   dueDateInput.value   = item.date;
   timeInput.value      = item.time ? item.time.slice(0,5) : "";
@@ -405,7 +408,6 @@ function openEdit(item) {
   addModal.classList.remove("hidden");
 }
 function closeModal() { addModal.classList.add("hidden"); }
-function capitalizeFirst(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 
 // Subject button -> open modal
 subjectBar.addEventListener("click", (e) => {
@@ -416,19 +418,21 @@ subjectBar.addEventListener("click", (e) => {
 closeAdd?.addEventListener("click", closeModal);
 cancelAdd?.addEventListener("click", closeModal);
 
-// Insert or update on submit
+// Insert or update on submit (Title required)
 addForm?.addEventListener("submit", async (e) => {
   e.preventDefault();
   addMsg.textContent = "Saving…";
 
-  // Map UI fields to DB fields
+  const titleVal = (titleInput.value || "").trim();
+  if (!titleVal) { addMsg.textContent = "Please enter a Title."; return; }
+
   const payload = {
     subject:    subjectInput.value,
     type:       (typeInput.value || "Other").toLowerCase(), // 'homework' | 'exam' | 'event' | 'other'
+    title:      titleVal,
     start_date: startDateInput.value || iso(new Date()),
-    date:       dueDateInput.value, // due date
+    date:       dueDateInput.value, // due date (required by HTML)
     time:       timeInput.value ? `${timeInput.value}:00` : null,
-    title:      (titleInput.value || "").trim() || null,
     notes:      (notesInput.value || "").trim() || null,
   };
 
@@ -455,4 +459,3 @@ addForm?.addEventListener("submit", async (e) => {
 tabActive.addEventListener("click", () => setTab("active"));
 tabCompleted.addEventListener("click", () => setTab("completed"));
 setTab("active");
-
